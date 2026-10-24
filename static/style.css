@@ -1,0 +1,166 @@
+:root {
+  --paper: #f3eee2;
+  --ink: #2c2a26;
+  --ink-soft: #57514a;
+  --pencil: #9a9284;
+  --hand: "Caveat", "Bradley Hand", "Segoe Print", cursive;
+  --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  color: var(--ink);
+  font-family: var(--hand);
+  background-color: var(--paper);
+  /* Cold-press paper: fine grain, faint mottling, darker towards the edges. */
+  background-image:
+    radial-gradient(ellipse at center, transparent 55%, rgba(120, 100, 70, 0.13) 100%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.3  0 0 0 0 0.22  0 0 0 0.09 0'/></filter><rect width='100%' height='100%' filter='url(%23g)'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='900' height='900'><filter id='m'><feTurbulence type='fractalNoise' baseFrequency='0.004' numOctaves='2'/><feColorMatrix values='0 0 0 0 0.5  0 0 0 0 0.42  0 0 0 0 0.3  0 0 0 0.07 0'/></filter><rect width='100%' height='100%' filter='url(%23m)'/></svg>");
+  overflow: hidden;
+}
+
+header {
+  padding: 2.4vh 4vw 0;
+  display: flex;
+  align-items: baseline;
+  column-gap: 1.6rem;
+  flex-wrap: wrap;
+}
+
+h1 {
+  font-weight: 600;
+  font-size: clamp(2.2rem, 4.4vw, 3.8rem);
+  line-height: 1;
+  margin: 0;
+}
+
+#summary {
+  margin: 0;
+  font-size: clamp(1.2rem, 1.9vw, 1.7rem);
+  color: var(--ink-soft);
+}
+
+header .underline {
+  flex-basis: 100%;
+  height: 10px;
+  margin-top: 0.2rem;
+  overflow: visible;
+}
+
+header .underline path {
+  fill: none;
+  stroke: var(--pencil);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+#page {
+  position: relative;
+  min-height: 0;
+  margin: 2vh 4vw 1vh;
+  overflow: hidden;
+}
+
+.sketch {
+  position: absolute;
+  display: flex;
+  transform: rotate(var(--tilt, 0deg));
+  transition: opacity 1.2s ease, left 1.4s ease, top 1.4s ease;
+  opacity: 0;
+}
+
+.sketch.shown { opacity: 1; }
+
+.sketch.notes-below,
+.sketch.force-below {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.sketch.notes-right:not(.force-below) {
+  flex-direction: row;
+  align-items: center;
+}
+
+.sketch.notes-left:not(.force-below) {
+  flex-direction: row-reverse;
+  align-items: flex-end;
+}
+
+.sketch.notes-right:not(.force-below) .notes { margin: 0 0 0 0.8em; }
+.sketch.notes-left:not(.force-below) .notes { margin: 0 0.8em 0.6em 0; text-align: right; }
+
+.sketch .art {
+  display: block;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  align-self: center;
+}
+
+.sketch .art.placeholder {
+  color: var(--ink-soft);
+  opacity: 0.85;
+}
+
+.notes {
+  margin: -0.4em 0 0 0.6em;
+  transform: rotate(var(--note-tilt, 0deg));
+  line-height: 1.02;
+  font-size: calc(18px * var(--ns, 1));
+  color: var(--ink-soft);
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.notes .name {
+  font-size: calc(25px * var(--ns, 1));
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.notes .name .reg {
+  font-weight: 400;
+  font-size: calc(19px * var(--ns, 1));
+  color: var(--ink-soft);
+  margin-left: 0.3em;
+}
+
+.notes .kind { color: var(--ink); }
+
+.notes .credit {
+  display: block;
+  margin-top: 0.25em;
+  font: italic calc(10px * max(var(--ns, 1), 0.85)) var(--serif);
+  color: var(--pencil);
+  text-decoration: none;
+}
+
+.notes .credit:hover { text-decoration: underline; }
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0 4vw 1.6vh;
+  font: italic 12px var(--serif);
+  color: var(--pencil);
+}
+
+#empty {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+  color: var(--ink-soft);
+}

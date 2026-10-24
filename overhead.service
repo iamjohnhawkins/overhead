@@ -1,0 +1,13 @@
+[Unit]
+Description=Overhead - watercolour sky chart
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/overhead
+ExecStart=/home/pi/overhead/.venv/bin/python app.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
