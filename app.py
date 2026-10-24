@@ -41,6 +41,7 @@ def load_config(path: Path) -> dict:
         "show_on_ground": False,
         "cutout_model": "isnet-general-use",
         "style": "watercolour",
+        "text_scale": 1.0,
     }
     if path.exists():
         cfg.update(tomllib.loads(path.read_text()))
@@ -195,6 +196,7 @@ def create_app(cfg: dict) -> Flask:
             radius_km=cfg["radius_km"],
             refresh_seconds=cfg["refresh_seconds"],
             place_name=cfg["place_name"],
+            text_scale=cfg["text_scale"],
             aircraft=planes,
         )
 

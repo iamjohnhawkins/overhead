@@ -89,8 +89,8 @@ function whereText(p) {
   if (p.on_ground) parts.push("on the ground");
   else if (p.altitude_ft != null) {
     let alt = `${fmt.format(Math.round(p.altitude_ft / 100) * 100)} ft`;
-    if (p.vertical_rate > 300) alt += ", climbing";
-    else if (p.vertical_rate < -300) alt += ", descending";
+    if (p.vertical_rate > 300) alt += " ↑";
+    else if (p.vertical_rate < -300) alt += " ↓";
     parts.push(alt);
   }
   if (p.track != null && !p.on_ground) parts.push(`heading ${compass(p.track)}`);
@@ -139,6 +139,7 @@ function setSize(div, p, pxPerMetre) {
 
 function render(data) {
   last = data;
+  document.documentElement.style.setProperty("--ts", String(data.text_scale || 1));
   const n = data.aircraft.length;
   const when = new Date(data.generated * 1000);
   document.getElementById("place").textContent = data.place_name;
@@ -198,7 +199,7 @@ function render(data) {
 // and grown again when it empties.
 const positions = new Map(); // hex -> {x, y}
 let layoutScale = 0;
-const GAP = 18;
+const GAP = 14;
 
 function mulberry(seed) {
   return () => {
@@ -269,7 +270,7 @@ function fitToPage(ordered, fresh = false) {
   const base = W / 150; // px per metre at scale 1: an A380 spans half the page
   const measure = () => ordered.map((p) => {
     // Handwriting shrinks too, but stays readable.
-    page.style.setProperty("--ns", String(Math.min(1, Math.max(0.6, 0.55 + 0.25 * layoutScale))));
+    page.style.setProperty("--ns", String(Math.min(1, Math.max(0.85, 0.7 + 0.25 * layoutScale))));
     const div = sketches.get(p.hex);
     setSize(div, p, base * layoutScale);
     return { hex: p.hex, div, w: div.offsetWidth, h: div.offsetHeight };
@@ -283,7 +284,7 @@ function fitToPage(ordered, fresh = false) {
   }
   let placed = false;
   while (layoutScale > 0.3) {
-    if (used(items) < 0.42 && tryPlace(items, W, H)) { placed = true; break; }
+    if (used(items) < 0.55 && tryPlace(items, W, H)) { placed = true; break; }
     layoutScale *= 0.9; positions.clear(); items = measure();
   }
   if (!placed) {

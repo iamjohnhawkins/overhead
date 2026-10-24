@@ -5,6 +5,9 @@
   --pencil: #9a9284;
   --hand: "Caveat", "Bradley Hand", "Segoe Print", cursive;
   --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+  /* Text sizes follow the screen height so they stay legible on a TV;
+     --ts is text_scale from config.toml, --ns shrinks notes in a busy sky. */
+  --ts: 1;
 }
 
 * { box-sizing: border-box; }
@@ -37,15 +40,16 @@ header {
 }
 
 h1 {
-  font-weight: 600;
-  font-size: clamp(2.2rem, 4.4vw, 3.8rem);
+  font-weight: 700;
+  font-size: calc(max(2.4rem, 6.5vh) * var(--ts));
   line-height: 1;
   margin: 0;
 }
 
 #summary {
   margin: 0;
-  font-size: clamp(1.2rem, 1.9vw, 1.7rem);
+  font-size: calc(max(1.3rem, 3.4vh) * var(--ts));
+  font-weight: 500;
   color: var(--ink-soft);
 }
 
@@ -115,21 +119,22 @@ header .underline path {
   margin: -0.4em 0 0 0.6em;
   transform: rotate(var(--note-tilt, 0deg));
   line-height: 1.02;
-  font-size: calc(18px * var(--ns, 1));
+  font-size: calc(max(18px, 3.3vh) * var(--ns, 1) * var(--ts));
+  font-weight: 500;
   color: var(--ink-soft);
   white-space: nowrap;
   max-width: 100%;
 }
 
 .notes .name {
-  font-size: calc(25px * var(--ns, 1));
-  font-weight: 600;
+  font-size: calc(max(25px, 4.5vh) * var(--ns, 1) * var(--ts));
+  font-weight: 700;
   color: var(--ink);
 }
 
 .notes .name .reg {
-  font-weight: 400;
-  font-size: calc(19px * var(--ns, 1));
+  font-weight: 500;
+  font-size: calc(max(19px, 3.4vh) * var(--ns, 1) * var(--ts));
   color: var(--ink-soft);
   margin-left: 0.3em;
 }
@@ -161,6 +166,6 @@ footer {
   left: 50%;
   top: 45%;
   transform: translate(-50%, -50%);
-  font-size: 2rem;
+  font-size: calc(max(2rem, 5vh) * var(--ts));
   color: var(--ink-soft);
 }

@@ -30,5 +30,9 @@ cutout_model = "isnet-general-use"
 # wet watercolour) or "ink" (pen and ink)
 style = "watercolour"
 
+# Text size multiplier, e.g. 1.2 if the notes are hard to read on your TV.
+# Photo credits stay small regardless.
+text_scale = 1.0
+
 # Name shown in the page heading
 place_name = "Above the house"
