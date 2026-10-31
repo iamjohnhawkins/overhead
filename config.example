@@ -34,5 +34,10 @@ style = "watercolour"
 # Photo credits stay small regardless.
 text_scale = 1.0
 
+# Altitude depth cue: high aircraft are drawn smaller and paler, as if seen
+# through haze. 0.3 means up to 30% smaller at 40,000 ft; 0 turns it off,
+# keeping sizes strictly to scale. Maximum 0.5.
+altitude_depth = 0.3
+
 # Name shown in the page heading
 place_name = "Above the house"

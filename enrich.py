@@ -2,11 +2,15 @@
 
 Sources (all free, no key):
   - planespotters.net public API: photos with photographer credit
-  - adsbdb.com: registration/type/operator, and callsign -> route
+  - adsbdb.com: registration/type/operator, and callsign -> route + airline
+  - pics.avs.io: airline logos by IATA code
+  - flagcdn.com: country flags
 """
 
+import io
 import json
 import logging
+import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -23,6 +27,8 @@ USER_AGENT = "overhead/1.0 (personal ADS-B display)"
 # Bump when the drawing style changes so cached airframes are redrawn.
 RENDER_VERSION = 4
 ROUTE_TTL = 6 * 3600
+# Bump when route fields change so cached routes are fetched again.
+ROUTE_SCHEMA = 3
 MISS_TTL = 24 * 3600
 
 
@@ -35,6 +41,8 @@ class Enricher:
         self.img_dir.mkdir(parents=True, exist_ok=True)
         self.photo_dir = cache_dir / "photos"
         self.photo_dir.mkdir(exist_ok=True)
+        self.badge_dir = cache_dir / "badges"
+        self.badge_dir.mkdir(exist_ok=True)
         self.db_path = cache_dir / "airframes.json"
         self.routes_path = cache_dir / "routes.json"
         self.airframes = self._load(self.db_path)
@@ -79,7 +87,9 @@ class Enricher:
             or (frame.get("miss") and now - frame["fetched"] > MISS_TTL)
             or (not frame.get("miss") and frame.get("render") != self.render_key)
         )
-        need_route = bool(callsign) and (route is None or now - route["fetched"] > ROUTE_TTL)
+        need_route = bool(callsign) and (
+            route is None or now - route["fetched"] > ROUTE_TTL or route.get("schema") != ROUTE_SCHEMA
+        )
         if need_frame or need_route:
             key = f"{hex_id}|{callsign}"
             with self.lock:
@@ -90,6 +100,34 @@ class Enricher:
 
     def image_path(self, hex_id: str) -> Path:
         return self.img_dir / f"{hex_id}.png"
+
+    BADGES = {
+        "logo": (re.compile(r"^[A-Z0-9]{2}$"), "https://pics.avs.io/400/160/{}.png"),
+        "flag": (re.compile(r"^[a-z]{2}$"), "https://flagcdn.com/w160/{}.png"),
+    }
+
+    def badge(self, kind: str, code: str) -> Path | None:
+        """An airline logo or country flag, fetched once and cached; None if unavailable."""
+        pattern, url = self.BADGES[kind]
+        if not pattern.match(code):
+            return None
+        path = self.badge_dir / f"{kind}-{code}.png"
+        miss = path.with_suffix(".miss")
+        if path.exists():
+            return path
+        if miss.exists() and time.time() - miss.stat().st_mtime < MISS_TTL:
+            return None
+        try:
+            r = self.http.get(url.format(code), timeout=10)
+            r.raise_for_status()
+            img = Image.open(io.BytesIO(r.content)).convert("RGBA")
+            box = img.getchannel("A").getbbox()  # trim the empty margins round logos
+            (img.crop(box) if box else img).save(path, optimize=True)
+            return path
+        except Exception as e:
+            log.warning("no %s for %s: %s", kind, code, e)
+            miss.touch()
+            return None
 
     # --- background work --------------------------------------------------
 
@@ -167,18 +205,21 @@ class Enricher:
             return None
 
     def _fetch_route(self, callsign: str) -> dict:
-        route: dict = {"fetched": time.time()}
+        route: dict = {"fetched": time.time(), "schema": ROUTE_SCHEMA}
         data = self._get_json(f"https://api.adsbdb.com/v0/callsign/{callsign}")
         fr = (data or {}).get("response", {}).get("flightroute") if isinstance(data, dict) else None
         if isinstance(fr, dict):
             def place(a):
                 a = a or {}
                 return {"iata": a.get("iata_code"), "icao": a.get("icao_code"),
-                        "city": a.get("municipality") or a.get("name")}
+                        "city": a.get("municipality") or a.get("name"),
+                        "lat": a.get("latitude"), "lon": a.get("longitude")}
 
+            airline = fr.get("airline") or {}
             route.update(
                 origin=place(fr.get("origin")),
                 destination=place(fr.get("destination")),
-                airline=(fr.get("airline") or {}).get("name"),
+                airline=airline.get("name"),
+                airline_iata=airline.get("iata"),
             )
         return route

@@ -9,6 +9,9 @@ where it is). Refreshes every 20 s.
 - Positions come from your own ADS-B decoder's `aircraft.json` (readsb, tar1090,
   dump1090-fa / PiAware; the path is auto-detected).
 - Registration, type and route come from [adsbdb.com](https://www.adsbdb.com).
+- Airline logos come from pics.avs.io and flags from [flagcdn.com](https://flagcdn.com),
+  cached in `cache/badges/`. The flag shows the country of registration,
+  worked out from the aircraft's transponder address (`countries.py`).
 - Photos come from [planespotters.net](https://www.planespotters.net), credited to
   their photographer on the page. The aircraft is cut out with
   [rembg](https://github.com/danielgatis/rembg) and painted with Pillow, locally,

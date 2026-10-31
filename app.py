@@ -16,6 +16,7 @@ from flask import Flask, abort, jsonify, send_file, send_from_directory
 
 import sketch
 from aircraft_sizes import category_for, size_for
+from countries import country_for
 from enrich import Enricher
 
 ROOT = Path(__file__).parent
@@ -42,6 +43,7 @@ def load_config(path: Path) -> dict:
         "cutout_model": "isnet-general-use",
         "style": "watercolour",
         "text_scale": 1.0,
+        "altitude_depth": 0.3,
     }
     if path.exists():
         cfg.update(tomllib.loads(path.read_text()))
@@ -100,6 +102,31 @@ def distance_bearing(lat1, lon1, lat2, lon2) -> tuple[float, float]:
     return dist, (math.degrees(math.atan2(y, x)) + 360) % 360
 
 
+def progress(lat, lon, speed_kt, origin, destination) -> dict:
+    """Distance flown and to go along the route, and minutes to arrival.
+
+    Empty when the airports have no coordinates, or the aircraft isn't
+    plausibly between them (adsbdb's route for a callsign is sometimes stale).
+    """
+    try:
+        olat, olon = float(origin["lat"]), float(origin["lon"])
+        dlat, dlon = float(destination["lat"]), float(destination["lon"])
+    except (TypeError, KeyError, ValueError):
+        return {}
+    total = distance_bearing(olat, olon, dlat, dlon)[0]
+    flown = distance_bearing(olat, olon, lat, lon)[0]
+    to_go = distance_bearing(lat, lon, dlat, dlon)[0]
+    if total < 50 or flown + to_go > total * 1.25 + 150:
+        return {}
+    out = {"flown_km": round(flown), "to_go_km": round(to_go)}
+    if speed_kt and speed_kt > 60:
+        minutes = to_go / (speed_kt * 1.852) * 60
+        if to_go < 80:
+            minutes += 4  # vectoring and the approach add time near the airport
+        out["eta_minutes"] = round(minutes)
+    return out
+
+
 def create_app(cfg: dict) -> Flask:
     app = Flask(__name__, static_folder=None)
     sketch.MODEL = cfg["cutout_model"]
@@ -132,6 +159,15 @@ def create_app(cfg: dict) -> Flask:
             abort(404)
         return send_file(path, max_age=86400)
 
+    @app.get("/badge/<kind>/<code>.png")
+    def badge(kind, code):
+        if kind not in enricher.BADGES:
+            abort(404)
+        path = enricher.badge(kind, code)
+        if not path:
+            abort(404)
+        return send_file(path, max_age=7 * 86400)
+
     @app.get("/api/sky")
     def sky():
         try:
@@ -160,6 +196,8 @@ def create_app(cfg: dict) -> Flask:
             drawn = frame.get("has_image") and frame.get("render") == enricher.render_key
 
             icao_type = ac.get("t") or frame.get("icao_type")
+            country = country_for(hex_id)
+            iata = route.get("airline_iata")
             span, length = size_for(icao_type, ac.get("category"))
             alt = ac.get("alt_baro", ac.get("altitude"))
             if alt == "ground" and not cfg["show_on_ground"]:
@@ -172,8 +210,13 @@ def create_app(cfg: dict) -> Flask:
                 "category": category_for(icao_type, ac.get("category")),
                 "type_name": ac.get("desc") or frame.get("type_name"),
                 "operator": route.get("airline") or ac.get("ownOp") or frame.get("owner"),
+                "logo": f"/badge/logo/{iata}.png" if iata else None,
+                "flag": f"/badge/flag/{country[0]}.png" if country else None,
+                "country": country[1] if country else None,
                 "origin": route.get("origin"),
                 "destination": route.get("destination"),
+                **(progress(lat, lon, ac.get("gs"), route.get("origin"), route.get("destination"))
+                   if alt != "ground" else {}),
                 "altitude_ft": 0 if alt == "ground" else alt,
                 "on_ground": alt == "ground",
                 "vertical_rate": ac.get("baro_rate", ac.get("geom_rate")),
@@ -197,6 +240,7 @@ def create_app(cfg: dict) -> Flask:
             refresh_seconds=cfg["refresh_seconds"],
             place_name=cfg["place_name"],
             text_scale=cfg["text_scale"],
+            altitude_depth=cfg["altitude_depth"],
             aircraft=planes,
         )
 

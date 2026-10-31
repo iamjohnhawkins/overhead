@@ -105,6 +105,7 @@ header .underline path {
 
 .sketch .art {
   display: block;
+  transition: opacity 2s ease, filter 2s ease;
   object-fit: contain;
   mix-blend-mode: multiply;
   align-self: center;
@@ -140,6 +141,32 @@ header .underline path {
 }
 
 .notes .kind { color: var(--ink); }
+
+.notes .logo {
+  display: block;
+  height: calc(max(20px, 3.4vh) * var(--ns, 1) * var(--ts));
+  width: calc(max(20px, 3.4vh) * 5 * var(--ns, 1) * var(--ts));
+  object-fit: contain;
+  object-position: left center;
+  margin: 0 0 0.15em;
+  mix-blend-mode: multiply;
+}
+
+.sketch.notes-left:not(.force-below) .notes .logo {
+  margin-left: auto;
+  object-position: right center;
+}
+
+/* A small flag, stuck in slightly crooked. */
+.notes .flag {
+  height: 0.6em;
+  width: 1.05em;
+  object-fit: contain;
+  margin-left: 0.35em;
+  vertical-align: 0.05em;
+  transform: rotate(-4deg);
+  filter: drop-shadow(0 0 0.6px rgba(44, 42, 38, 0.6));
+}
 
 .notes .credit {
   display: block;

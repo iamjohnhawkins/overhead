@@ -84,6 +84,23 @@ function routeText(p) {
   return p.operator || "";
 }
 
+function progressText(p) {
+  if (p.flown_km == null) return "";
+  const parts = [`${fmt.format(p.flown_km)} km flown`];
+  if (p.eta_minutes != null) {
+    const m = p.eta_minutes;
+    if (m < 2) parts.push("landing now");
+    else if (m < 90) parts.push(`lands in ~${m} min`);
+    else {
+      const at = new Date(Date.now() + m * 60000);
+      parts.push(`lands ~${at.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`);
+    }
+  } else {
+    parts.push(`${fmt.format(p.to_go_km)} km to go`);
+  }
+  return parts.join(" · ");
+}
+
 function whereText(p) {
   const parts = [`${p.distance_km < 1 ? "right overhead" : `${Math.round(p.distance_km)} km ${compass(p.bearing)}`}`];
   if (p.on_ground) parts.push("on the ground");
@@ -105,9 +122,15 @@ function notesHtml(p) {
   const credit = p.photo_credit
     ? `<a class="credit" href="${p.photo_link}" target="_blank" rel="noopener">${escapeHtml(p.photo_credit)}</a>`
     : "";
-  return `<div class="name">${escapeHtml(title)}${reg}</div>
+  // Badges get fixed-size boxes, so the layout doesn't shift when they load.
+  const logo = p.logo
+    ? `<img class="logo" src="${p.logo}" alt="${escapeHtml(p.operator || "")}" onerror="this.remove()">` : "";
+  const flag = p.flag
+    ? `<img class="flag" src="${p.flag}" alt="" title="Registered in ${escapeHtml(p.country)}" onerror="this.remove()">` : "";
+  return `${logo}<div class="name">${escapeHtml(title)}${reg}${flag}</div>
     <div class="kind">${escapeHtml(kind)}</div>
     ${route ? `<div class="route">${escapeHtml(route)}</div>` : ""}
+    ${progressText(p) ? `<div class="progress">${progressText(p)}</div>` : ""}
     <div class="where">${whereText(p)}</div>
     ${credit}`;
 }
@@ -125,10 +148,23 @@ function buildSketch(p) {
   return div;
 }
 
+// Depth: 0 for aircraft on the ground or low down, up to altitudeDepth at
+// cruising height. Rounded so small altitude changes don't nudge the layout.
+let altitudeDepth = 0.3;
+function depthOf(p) {
+  if (p.on_ground || p.altitude_ft == null) return 0;
+  const steps = Math.round(Math.min(Math.max(p.altitude_ft, 0), 40000) / 2000);
+  return (steps / 20) * altitudeDepth;
+}
+
 function setSize(div, p, pxPerMetre) {
   const art = div.querySelector(".art");
+  // High aircraft are drawn a little smaller and paler, as if seen through haze.
+  const d = depthOf(p);
+  art.style.opacity = String(1 - d * 1.5);
+  art.style.filter = `saturate(${1 - d * 1.3}) contrast(${1 - d * 0.6})`;
   // Drawings are cropped to the aircraft, so their width is its length on the page.
-  const w = Math.max(80, p.length_m * pxPerMetre);
+  const w = Math.max(80, p.length_m * pxPerMetre * (1 - d));
   const wide = Math.min(w, page.clientWidth * 0.5);
   art.style.width = `${wide}px`;
   const [bw, bh] = SILHOUETTES[silhouetteKind(p)].box;
@@ -140,6 +176,7 @@ function setSize(div, p, pxPerMetre) {
 function render(data) {
   last = data;
   document.documentElement.style.setProperty("--ts", String(data.text_scale || 1));
+  altitudeDepth = Math.min(0.5, Math.max(0, data.altitude_depth ?? 0.3));
   const n = data.aircraft.length;
   const when = new Date(data.generated * 1000);
   document.getElementById("place").textContent = data.place_name;
